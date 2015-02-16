@@ -180,6 +180,7 @@ void App::run()
     // Prepare disparity map of specified type
     Mat disp(left.size(), CV_8U);
     cuda::GpuMat d_disp(left.size(), CV_8U);
+    cuda::GpuMat f_disp(left.size(), CV_32F);
 
     cout << endl;
     printParams();
@@ -202,7 +203,14 @@ void App::run()
                 imshow("left", left);
                 imshow("right", right);
             }
-            bm->compute(d_left, d_right, d_disp);
+            if(bm->getRefineDisparity())
+            {
+                bm->compute(d_left, d_right, f_disp);
+            }
+            else
+            {
+                bm->compute(d_left, d_right, d_disp);
+            }
             break;
         case Params::BP: bp->compute(d_left, d_right, d_disp); break;
         case Params::CSBP: csbp->compute(d_left, d_right, d_disp); break;
@@ -210,9 +218,24 @@ void App::run()
         workEnd();
 
         // Show results
-        d_disp.download(disp);
-        putText(disp, text(), Point(5, 25), FONT_HERSHEY_SIMPLEX, 1.0, Scalar::all(255));
-        imshow("disparity", disp);
+        if(p.method==Params::BM && (bm->getRefineDisparity()))
+        {
+            cuda::Stream colorstream;
+            cuda::GpuMat colordisp, s_disp;
+            f_disp.convertTo(s_disp, CV_16S, 16, 0, colorstream);
+            cuda::drawColorDisp(s_disp, colordisp, p.ndisp*16, colorstream);
+            cv::Mat cdisp(left.size(), CV_8UC4);
+            colordisp.download(cdisp, colorstream);
+            colorstream.waitForCompletion();
+            putText(cdisp, text(), Point(5, 25), FONT_HERSHEY_SIMPLEX, 1.0, Scalar::all(255));
+            imshow("disparity", cdisp);
+        }
+        else
+        {
+            d_disp.download(disp);
+            putText(disp, text(), Point(5, 25), FONT_HERSHEY_SIMPLEX, 1.0, Scalar::all(255));
+            imshow("disparity", disp);
+        }
 
         handleKey((char)waitKey(3));
     }
@@ -302,7 +325,14 @@ void App::handleKey(char key)
             cout << "prefilter_sobel: " << bm->getPreFilterType() << endl;
         }
         break;
-    case '1':
+    case 'f': case 'F':
+        if (p.method == Params::BM)
+        {
+            bm->setRefineDisparity(!bm->getRefineDisparity());
+            cout << "refine disparity: " << bm->getRefineDisparity();
+        }
+        break;
+     case '1':
         p.ndisp = p.ndisp == 1 ? 8 : p.ndisp + 8;
         cout << "ndisp: " << p.ndisp << endl;
         bm->setNumDisparities(p.ndisp);
