@@ -75,6 +75,9 @@ public:
     using cv::StereoBM::compute;
 
     virtual void compute(InputArray left, InputArray right, OutputArray disparity, Stream& stream) = 0;
+
+    virtual void setRefineDisparity(bool refine) = 0;
+    virtual bool getRefineDisparity(void) const = 0;
 };
 
 /** @brief Creates StereoBM object.
