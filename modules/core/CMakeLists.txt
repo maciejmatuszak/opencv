@@ -1,6 +1,6 @@
 set(the_description "The Core Functionality")
 ocv_add_module(core
-               PRIVATE_REQUIRED ${ZLIB_LIBRARIES} "${OPENCL_LIBRARIES}" "${VA_LIBRARIES}"
+               PRIVATE_REQUIRED ${ZLIB_LIBRARIES} "${OPENCL_LIBRARIES}" "${VA_LIBRARIES}" "${OPENCV_HAL_LINKER_LIBS}"
                OPTIONAL opencv_cudev
                WRAP java python)
 
@@ -27,7 +27,7 @@ source_group("Cuda Headers\\Detail" FILES ${lib_cuda_hdrs_detail})
 ocv_glob_module_sources(SOURCES "${OPENCV_MODULE_opencv_core_BINARY_DIR}/version_string.inc"
                         HEADERS ${lib_cuda_hdrs} ${lib_cuda_hdrs_detail})
 
-ocv_module_include_directories(${the_module} ${ZLIB_INCLUDE_DIRS})
+ocv_module_include_directories(${the_module} ${ZLIB_INCLUDE_DIRS} ${OPENCL_INCLUDE_DIRS})
 ocv_create_module(${extra_libs})
 
 ocv_add_accuracy_tests()
