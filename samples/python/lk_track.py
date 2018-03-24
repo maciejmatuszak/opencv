@@ -46,15 +46,15 @@ class App:
 
     def run(self):
         while True:
-            ret, frame = self.cam.read()
+            _ret, frame = self.cam.read()
             frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             vis = frame.copy()
 
             if len(self.tracks) > 0:
                 img0, img1 = self.prev_gray, frame_gray
                 p0 = np.float32([tr[-1] for tr in self.tracks]).reshape(-1, 1, 2)
-                p1, st, err = cv2.calcOpticalFlowPyrLK(img0, img1, p0, None, **lk_params)
-                p0r, st, err = cv2.calcOpticalFlowPyrLK(img1, img0, p1, None, **lk_params)
+                p1, _st, _err = cv2.calcOpticalFlowPyrLK(img0, img1, p0, None, **lk_params)
+                p0r, _st, _err = cv2.calcOpticalFlowPyrLK(img1, img0, p1, None, **lk_params)
                 d = abs(p0-p0r).reshape(-1, 2).max(-1)
                 good = d < 1
                 new_tracks = []
@@ -85,7 +85,7 @@ class App:
             self.prev_gray = frame_gray
             cv2.imshow('lk_track', vis)
 
-            ch = 0xFF & cv2.waitKey(1)
+            ch = cv2.waitKey(1)
             if ch == 27:
                 break
 

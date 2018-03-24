@@ -38,7 +38,7 @@ def onmouse(event, x, y, flags, param):
             patch = gray[sel[1]:sel[3],sel[0]:sel[2]]
             result = cv2.matchTemplate(gray,patch,cv2.TM_CCOEFF_NORMED)
             result = np.abs(result)**3
-            val, result = cv2.threshold(result, 0.01, 0, cv2.THRESH_TOZERO)
+            _val, result = cv2.threshold(result, 0.01, 0, cv2.THRESH_TOZERO)
             result8 = cv2.normalize(result,None,0,255,cv2.NORM_MINMAX,cv2.CV_8U)
             cv2.imshow("result", result8)
         drag_start = None
@@ -78,6 +78,6 @@ if __name__ == '__main__':
             drag_start = None
             gray=cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             cv2.imshow("gray",gray)
-            if (cv2.waitKey() & 255) == 27:
+            if cv2.waitKey() == 27:
                 break
     cv2.destroyAllWindows()

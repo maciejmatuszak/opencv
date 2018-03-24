@@ -42,8 +42,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_HAL_HPP__
-#define __OPENCV_HAL_HPP__
+#ifndef OPENCV_HAL_HPP
+#define OPENCV_HAL_HPP
 
 #include "opencv2/core/cvdef.h"
 #include "opencv2/core/cvstd.hpp"
@@ -66,6 +66,8 @@ CV_EXPORTS bool Cholesky32f(float* A, size_t astep, int m, float* b, size_t bste
 CV_EXPORTS bool Cholesky64f(double* A, size_t astep, int m, double* b, size_t bstep, int n);
 CV_EXPORTS void SVD32f(float* At, size_t astep, float* W, float* U, size_t ustep, float* Vt, size_t vstep, int m, int n, int flags);
 CV_EXPORTS void SVD64f(double* At, size_t astep, double* W, double* U, size_t ustep, double* Vt, size_t vstep, int m, int n, int flags);
+CV_EXPORTS int QR32f(float* A, size_t astep, int m, int n, int k, float* b, size_t bstep, float* hFactors);
+CV_EXPORTS int QR64f(double* A, size_t astep, int m, int n, int k, double* b, size_t bstep, double* hFactors);
 
 CV_EXPORTS void gemm32f(const float* src1, size_t src1_step, const float* src2, size_t src2_step,
                         float alpha, const float* src3, size_t src3_step, float beta, float* dst, size_t dst_step,
@@ -89,7 +91,8 @@ CV_EXPORTS void exp64f(const double* src, double* dst, int n);
 CV_EXPORTS void log32f(const float* src, float* dst, int n);
 CV_EXPORTS void log64f(const double* src, double* dst, int n);
 
-CV_EXPORTS void fastAtan2(const float* y, const float* x, float* dst, int n, bool angleInDegrees);
+CV_EXPORTS void fastAtan32f(const float* y, const float* x, float* dst, int n, bool angleInDegrees);
+CV_EXPORTS void fastAtan64f(const double* y, const double* x, double* dst, int n, bool angleInDegrees);
 CV_EXPORTS void magnitude32f(const float* x, const float* y, float* dst, int n);
 CV_EXPORTS void magnitude64f(const double* x, const double* y, double* dst, int n);
 CV_EXPORTS void sqrt32f(const float* src, float* dst, int len);
@@ -232,6 +235,7 @@ CV_EXPORTS void exp(const double* src, double* dst, int n);
 CV_EXPORTS void log(const float* src, float* dst, int n);
 CV_EXPORTS void log(const double* src, double* dst, int n);
 
+CV_EXPORTS void fastAtan2(const float* y, const float* x, float* dst, int n, bool angleInDegrees);
 CV_EXPORTS void magnitude(const float* x, const float* y, float* dst, int n);
 CV_EXPORTS void magnitude(const double* x, const double* y, double* dst, int n);
 CV_EXPORTS void sqrt(const float* src, float* dst, int len);
@@ -243,4 +247,4 @@ CV_EXPORTS void invSqrt(const double* src, double* dst, int len);
 
 }} //cv::hal
 
-#endif //__OPENCV_HAL_HPP__
+#endif //OPENCV_HAL_HPP

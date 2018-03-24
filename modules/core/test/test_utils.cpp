@@ -27,6 +27,7 @@ TEST(CommandLineParser, testFailure)
     parser.get<bool>("h");
     EXPECT_FALSE(parser.check());
 }
+
 TEST(CommandLineParser, testHas_noValues)
 {
     const char* argv[] = {"<bin>", "-h", "--info"};
@@ -34,8 +35,14 @@ TEST(CommandLineParser, testHas_noValues)
     cv::CommandLineParser parser(argc, argv, keys);
     EXPECT_TRUE(parser.has("help"));
     EXPECT_TRUE(parser.has("h"));
+    EXPECT_TRUE(parser.get<bool>("help"));
+    EXPECT_TRUE(parser.get<bool>("h"));
     EXPECT_TRUE(parser.has("info"));
     EXPECT_TRUE(parser.has("i"));
+    EXPECT_TRUE(parser.get<bool>("info"));
+    EXPECT_TRUE(parser.get<bool>("i"));
+    EXPECT_TRUE(parser.get<bool>("true"));
+    EXPECT_TRUE(parser.get<bool>("t"));
     EXPECT_FALSE(parser.has("n"));
     EXPECT_FALSE(parser.has("unused"));
 }
@@ -46,8 +53,14 @@ TEST(CommandLineParser, testHas_TrueValues)
     cv::CommandLineParser parser(argc, argv, keys);
     EXPECT_TRUE(parser.has("help"));
     EXPECT_TRUE(parser.has("h"));
+    EXPECT_TRUE(parser.get<bool>("help"));
+    EXPECT_TRUE(parser.get<bool>("h"));
     EXPECT_TRUE(parser.has("info"));
     EXPECT_TRUE(parser.has("i"));
+    EXPECT_TRUE(parser.get<bool>("info"));
+    EXPECT_TRUE(parser.get<bool>("i"));
+    EXPECT_TRUE(parser.get<bool>("true"));
+    EXPECT_TRUE(parser.get<bool>("t"));
     EXPECT_FALSE(parser.has("n"));
     EXPECT_FALSE(parser.has("unused"));
 }
@@ -58,8 +71,14 @@ TEST(CommandLineParser, testHas_TrueValues1)
     cv::CommandLineParser parser(argc, argv, keys);
     EXPECT_TRUE(parser.has("help"));
     EXPECT_TRUE(parser.has("h"));
+    EXPECT_TRUE(parser.get<bool>("help"));
+    EXPECT_TRUE(parser.get<bool>("h"));
     EXPECT_TRUE(parser.has("info"));
     EXPECT_TRUE(parser.has("i"));
+    EXPECT_TRUE(parser.get<bool>("info"));
+    EXPECT_TRUE(parser.get<bool>("i"));
+    EXPECT_TRUE(parser.get<bool>("true"));
+    EXPECT_TRUE(parser.get<bool>("t"));
     EXPECT_FALSE(parser.has("n"));
     EXPECT_FALSE(parser.has("unused"));
 }
@@ -70,8 +89,14 @@ TEST(CommandLineParser, testHas_FalseValues0)
     cv::CommandLineParser parser(argc, argv, keys);
     EXPECT_TRUE(parser.has("help"));
     EXPECT_TRUE(parser.has("h"));
+    EXPECT_FALSE(parser.get<bool>("help"));
+    EXPECT_FALSE(parser.get<bool>("h"));
     EXPECT_TRUE(parser.has("info"));
     EXPECT_TRUE(parser.has("i"));
+    EXPECT_FALSE(parser.get<bool>("info"));
+    EXPECT_FALSE(parser.get<bool>("i"));
+    EXPECT_TRUE(parser.get<bool>("true"));
+    EXPECT_TRUE(parser.get<bool>("t"));
     EXPECT_FALSE(parser.has("n"));
     EXPECT_FALSE(parser.has("unused"));
 }
@@ -98,30 +123,38 @@ TEST(CommandLineParser, testBoolOption_noValues)
     EXPECT_TRUE(parser.get<bool>("h"));
     EXPECT_TRUE(parser.get<bool>("info"));
     EXPECT_TRUE(parser.get<bool>("i"));
+    EXPECT_TRUE(parser.get<bool>("true"));
+    EXPECT_TRUE(parser.get<bool>("t"));
 }
 
 TEST(CommandLineParser, testBoolOption_TrueValues)
 {
-    const char* argv[] = {"<bin>", "-h=TRUE", "--info=true"};
-    const int argc = 3;
+    const char* argv[] = {"<bin>", "-h=TrUe", "-t=1", "--info=true", "-n=truE"};
+    const int argc = 5;
     cv::CommandLineParser parser(argc, argv, keys);
-    //EXPECT_TRUE(parser.get<bool>("help"));
-    //EXPECT_TRUE(parser.get<bool>("h"));
+    EXPECT_TRUE(parser.get<bool>("help"));
+    EXPECT_TRUE(parser.get<bool>("h"));
     EXPECT_TRUE(parser.get<bool>("info"));
     EXPECT_TRUE(parser.get<bool>("i"));
-    EXPECT_FALSE(parser.get<bool>("unused"));
-    EXPECT_FALSE(parser.get<bool>("n"));
+    EXPECT_TRUE(parser.get<bool>("true"));
+    EXPECT_TRUE(parser.get<bool>("t"));
+    EXPECT_TRUE(parser.get<bool>("unused"));
+    EXPECT_TRUE(parser.get<bool>("n"));
 }
 
 TEST(CommandLineParser, testBoolOption_FalseValues)
 {
-    const char* argv[] = {"<bin>", "--help=FALSE", "-i=false"};
-    const int argc = 3;
+    const char* argv[] = {"<bin>", "--help=FALSE", "-t=FaLsE", "-i=false", "-n=0"};
+    const int argc = 5;
     cv::CommandLineParser parser(argc, argv, keys);
     EXPECT_FALSE(parser.get<bool>("help"));
     EXPECT_FALSE(parser.get<bool>("h"));
     EXPECT_FALSE(parser.get<bool>("info"));
     EXPECT_FALSE(parser.get<bool>("i"));
+    EXPECT_FALSE(parser.get<bool>("true"));
+    EXPECT_FALSE(parser.get<bool>("t"));
+    EXPECT_FALSE(parser.get<bool>("unused"));
+    EXPECT_FALSE(parser.get<bool>("n"));
 }
 
 
@@ -216,6 +249,19 @@ TEST(CommandLineParser, positional_regression_5074_equal_sign)
     EXPECT_EQ("1=0", parser.get<String>(0));
     EXPECT_EQ("1=0", parser.get<String>("eq1"));
     EXPECT_TRUE(parser.check());
+}
+
+
+TEST(AutoBuffer, allocate_test)
+{
+    AutoBuffer<int, 5> abuf(2);
+    EXPECT_EQ(2u, abuf.size());
+
+    abuf.allocate(4);
+    EXPECT_EQ(4u, abuf.size());
+
+    abuf.allocate(6);
+    EXPECT_EQ(6u, abuf.size());
 }
 
 } // namespace

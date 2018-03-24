@@ -11,8 +11,6 @@
 #include "opencv2/superres/optical_flow.hpp"
 #include "opencv2/opencv_modules.hpp"
 
-#include "tick_meter.hpp"
-
 using namespace std;
 using namespace cv;
 using namespace cv::superres;
@@ -62,7 +60,7 @@ int main(int argc, const char* argv[])
         "{ s scale      | 4         | Scale factor }"
         "{ i iterations | 180       | Iteration count }"
         "{ t temporal   | 4         | Radius of the temporal search area }"
-        "{ f flow       | farneback | Optical flow algorithm (farneback, simple, tvl1, brox, pyrlk) }"
+        "{ f flow       | farneback | Optical flow algorithm (farneback, tvl1, brox, pyrlk) }"
         "{ g gpu        | false     | CPU as default device, cuda for CUDA }"
         "{ h help       | false     | Print help message }"
     );
@@ -138,7 +136,7 @@ int main(int argc, const char* argv[])
 
     for (int i = 0;; ++i)
     {
-        cout << '[' << setw(3) << i << "] : ";
+        cout << '[' << setw(3) << i << "] : " << flush;
         Mat result;
 
         MEASURE_TIME(superRes->nextFrame(result));

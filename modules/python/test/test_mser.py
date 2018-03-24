@@ -37,7 +37,7 @@ class mser_test(NewOpenCVTests):
         mserExtractor.setDelta(kDelta)
         np.random.seed(10)
 
-        for i in range(100):
+        for _i in range(100):
 
             use_big_image = int(np.random.rand(1,1)*7) != 0
             invert = int(np.random.rand(1,1)*2) != 0
@@ -59,7 +59,7 @@ class mser_test(NewOpenCVTests):
             if blur:
                 src = cv2.GaussianBlur(src, (5, 5), 1.5, 1.5)
             minRegs = 7 if use_big_image else 2
-            maxRegs = 1000 if use_big_image else 15
+            maxRegs = 1000 if use_big_image else 20
             if binarize and (thresh == 0 or thresh == 255):
                 minRegs = maxRegs = 0
             msers, boxes = mserExtractor.detectRegions(src)
@@ -67,3 +67,6 @@ class mser_test(NewOpenCVTests):
             self.assertEqual(nmsers, len(boxes))
             self.assertLessEqual(minRegs, nmsers)
             self.assertGreaterEqual(maxRegs, nmsers)
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

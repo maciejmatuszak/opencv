@@ -32,10 +32,10 @@ def main():
         model = cv2.ml.SVM_load(classifier_fn)
     else:
         model = cv2.ml.SVM_create()
-        model.load_(classifier_fn) #Known bug: https://github.com/Itseez/opencv/issues/4969
+        model.load_(classifier_fn) #Known bug: https://github.com/opencv/opencv/issues/4969
 
     while True:
-        ret, frame = cap.read()
+        _ret, frame = cap.read()
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
 
@@ -59,12 +59,12 @@ def main():
             cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0))
 
             bin_roi = bin[y:,x:][:h,:w]
-            gray_roi = gray[y:,x:][:h,:w]
 
             m = bin_roi != 0
             if not 0.1 < m.mean() < 0.4:
                 continue
             '''
+            gray_roi = gray[y:,x:][:h,:w]
             v_in, v_out = gray_roi[m], gray_roi[~m]
             if v_out.std() > 10.0:
                 continue
@@ -92,7 +92,7 @@ def main():
 
         cv2.imshow('frame', frame)
         cv2.imshow('bin', bin)
-        ch = cv2.waitKey(1) & 0xFF
+        ch = cv2.waitKey(1)
         if ch == 27:
             break
 

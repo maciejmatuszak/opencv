@@ -64,7 +64,7 @@ PlanarTarget = namedtuple('PlaneTarget', 'image, rect, keypoints, descrs, data')
   p0     - matched points coords in target image
   p1     - matched points coords in input frame
   H      - homography matrix from p0 to p1
-  quad   - target bounary quad in input frame
+  quad   - target boundary quad in input frame
 '''
 TrackedTarget = namedtuple('TrackedTarget', 'target, p0, p1, H, quad')
 
@@ -170,7 +170,7 @@ class App:
 
             self.rect_sel.draw(vis)
             cv2.imshow('plane', vis)
-            ch = cv2.waitKey(1) & 0xFF
+            ch = cv2.waitKey(1)
             if ch == ord(' '):
                 self.paused = not self.paused
             if ch == ord('c'):

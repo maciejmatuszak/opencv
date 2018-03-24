@@ -71,7 +71,7 @@ def deskew(img):
 
 class StatModel(object):
     def load(self, fn):
-        self.model.load(fn)  # Known bug: https://github.com/Itseez/opencv/issues/4969
+        self.model.load(fn)  # Known bug: https://github.com/opencv/opencv/issues/4969
     def save(self, fn):
         self.model.save(fn)
 
@@ -84,7 +84,7 @@ class KNearest(StatModel):
         self.model.train(samples, cv2.ml.ROW_SAMPLE, responses)
 
     def predict(self, samples):
-        retval, results, neigh_resp, dists = self.model.findNearest(samples, self.k)
+        _retval, results, _neigh_resp, _dists = self.model.findNearest(samples, self.k)
         return results.ravel()
 
 class SVM(StatModel):
@@ -109,7 +109,7 @@ def evaluate_model(model, digits, samples, labels):
 
     confusion = np.zeros((10, 10), np.int32)
     for i, j in zip(labels, resp):
-        confusion[i, j] += 1
+        confusion[i, int(j)] += 1
     print('confusion matrix:')
     print(confusion)
     print()

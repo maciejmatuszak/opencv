@@ -28,7 +28,7 @@ from common import nothing, getsize
 def build_lappyr(img, leveln=6, dtype=np.int16):
     img = dtype(img)
     levels = []
-    for i in xrange(leveln-1):
+    for _i in xrange(leveln-1):
         next_img = cv2.pyrDown(img)
         img1 = cv2.pyrUp(next_img, dstsize=getsize(img))
         levels.append(img-img1)
@@ -70,5 +70,5 @@ if __name__ == '__main__':
 
         cv2.imshow('laplacian pyramid filter', res)
 
-        if cv2.waitKey(1) & 0xFF == 27:
+        if cv2.waitKey(1) == 27:
             break

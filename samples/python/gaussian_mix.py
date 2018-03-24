@@ -15,7 +15,7 @@ import cv2
 def make_gaussians(cluster_n, img_size):
     points = []
     ref_distrs = []
-    for i in xrange(cluster_n):
+    for _i in xrange(cluster_n):
         mean = (0.1 + 0.8*random.rand(2)) * img_size
         a = (random.rand(2, 2)-0.5)*img_size*0.1
         cov = np.dot(a.T, a) + img_size*0.05*np.eye(2)
@@ -28,7 +28,7 @@ def make_gaussians(cluster_n, img_size):
 
 def draw_gaussain(img, mean, cov, color):
     x, y = np.int32(mean)
-    w, u, vt = cv2.SVDecomp(cov)
+    w, u, _vt = cv2.SVDecomp(cov)
     ang = np.arctan2(u[1, 0], u[0, 0])*(180/np.pi)
     s1, s2 = np.sqrt(w)*3.0
     cv2.ellipse(img, (x, y), (s1, s2), ang, 0, 360, color, 1, cv2.LINE_AA)
@@ -50,7 +50,7 @@ if __name__ == '__main__':
         em.setCovarianceMatrixType(cv2.ml.EM_COV_MAT_GENERIC)
         em.trainEM(points)
         means = em.getMeans()
-        covs = em.getCovs()  # Known bug: https://github.com/Itseez/opencv/pull/4232
+        covs = em.getCovs()  # Known bug: https://github.com/opencv/opencv/pull/4232
         found_distrs = zip(means, covs)
         print('ready!\n')
 
@@ -63,7 +63,7 @@ if __name__ == '__main__':
             draw_gaussain(img, m, cov, (0, 0, 255))
 
         cv2.imshow('gaussian mixture', img)
-        ch = 0xFF & cv2.waitKey(0)
+        ch = cv2.waitKey(0)
         if ch == 27:
             break
     cv2.destroyAllWindows()
