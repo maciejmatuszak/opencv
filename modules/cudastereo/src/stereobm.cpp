@@ -56,6 +56,7 @@ namespace cv { namespace cuda { namespace device
     namespace stereobm
     {
         void stereoBM_CUDA(const PtrStepSzb& left, const PtrStepSzb& right, const PtrStepSzb& disp, int ndisp, int winsz, const PtrStepSz<unsigned int>& minSSD_buf, cudaStream_t & stream);
+        void refineBM_CUDA(const PtrStepSzb& left, const PtrStepSzb& right, const PtrStepSzb& disp, const int ndisp, int winsz, const PtrStepSzf& out_disp, const cudaStream_t & stream);
         void prefilter_xsobel(const PtrStepSzb& input, const PtrStepSzb& output, int prefilterCap /*= 31*/, cudaStream_t & stream);
         void postfilter_textureness(const PtrStepSzb& input, int winsz, float avgTexturenessThreshold, const PtrStepSzb& disp, cudaStream_t & stream);
     }
@@ -113,18 +114,22 @@ namespace
         Rect getROI2() const { return Rect(); }
         void setROI2(Rect /*roi2*/) {}
 
+        bool getRefineDisparity() const { return refineDisparity_; }
+        void setRefineDisparity(bool refine) { refineDisparity_ = refine; }
+
     private:
         int preset_;
         int ndisp_;
         int winSize_;
         int preFilterCap_;
         float avergeTexThreshold_;
+        bool refineDisparity_;
 
         GpuMat minSSD_, leBuf_, riBuf_;
     };
 
     StereoBMImpl::StereoBMImpl(int numDisparities, int blockSize)
-        : preset_(0), ndisp_(numDisparities), winSize_(blockSize), preFilterCap_(31), avergeTexThreshold_(3)
+        : preset_(0), ndisp_(numDisparities), winSize_(blockSize), preFilterCap_(31), avergeTexThreshold_(3), refineDisparity_(false)
     {
     }
 
@@ -148,8 +153,18 @@ namespace
         CV_Assert( left.type() == CV_8UC1 );
         CV_Assert( left.size() == right.size() && left.type() == right.type() );
 
-        _disparity.create(left.size(), CV_8UC1);
-        GpuMat disparity = _disparity.getGpuMat();
+        GpuMat int_disparity;
+
+        if(refineDisparity_)
+        {
+            _disparity.create(left.size(), CV_32F);
+            int_disparity.create(left.size(), CV_8U);
+        }
+        else
+        {
+            _disparity.create(left.size(), CV_8UC1);
+            int_disparity = _disparity.getGpuMat();
+        }
 
         cudaStream_t stream = StreamAccessor::getStream(_stream);
 
@@ -158,7 +173,7 @@ namespace
         PtrStepSzb le_for_bm =  left;
         PtrStepSzb ri_for_bm = right;
 
-        if (preset_ == cv::StereoBM::PREFILTER_XSOBEL)
+        if (preset_ & cv::StereoBM::PREFILTER_XSOBEL)
         {
             cuda::ensureSizeIsEnough(left.size(), left.type(), leBuf_);
             cuda::ensureSizeIsEnough(right.size(), right.type(), riBuf_);
@@ -170,10 +185,16 @@ namespace
             ri_for_bm = riBuf_;
         }
 
-        stereoBM_CUDA(le_for_bm, ri_for_bm, disparity, ndisp_, winSize_, minSSD_, stream);
+        stereoBM_CUDA(le_for_bm, ri_for_bm, int_disparity, ndisp_, winSize_, minSSD_, stream);
 
         if (avergeTexThreshold_ > 0)
-            postfilter_textureness(le_for_bm, winSize_, avergeTexThreshold_, disparity, stream);
+            postfilter_textureness(le_for_bm, winSize_, avergeTexThreshold_, int_disparity, stream);
+
+        if (refineDisparity_)
+        {
+            GpuMat disparity = _disparity.getGpuMat();
+            refineBM_CUDA(le_for_bm, ri_for_bm, int_disparity, ndisp_, winSize_, disparity, stream);
+        }
     }
 }
 

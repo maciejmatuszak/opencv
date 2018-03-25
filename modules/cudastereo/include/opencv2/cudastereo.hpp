@@ -75,6 +75,9 @@ public:
     using cv::StereoBM::compute;
 
     virtual void compute(InputArray left, InputArray right, OutputArray disparity, Stream& stream) = 0;
+
+    virtual void setRefineDisparity(bool refine) = 0;
+    virtual bool getRefineDisparity(void) const = 0;
 };
 
 /** @brief Creates StereoBM object.
@@ -308,7 +311,7 @@ disparity map.
 
 @sa reprojectImageTo3D
  */
-CV_EXPORTS void reprojectImageTo3D(InputArray disp, OutputArray xyzw, InputArray Q, int dst_cn = 4, Stream& stream = Stream::Null());
+CV_EXPORTS void reprojectImageTo3D(InputArray disp, OutputArray xyzw, InputArray Q, int dst_cn = 4, bool handleMissingValues=true, Stream& stream = Stream::Null());
 
 /** @brief Colors a disparity image.
 

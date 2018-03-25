@@ -47,7 +47,7 @@ using namespace cv::cuda;
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-void cv::cuda::reprojectImageTo3D(InputArray, OutputArray, InputArray, int, Stream&) { throw_no_cuda(); }
+void cv::cuda::reprojectImageTo3D(InputArray, OutputArray, InputArray, int, bool, Stream&) { throw_no_cuda(); }
 void cv::cuda::drawColorDisp(InputArray, OutputArray, int, Stream&) { throw_no_cuda(); }
 
 #else
@@ -58,14 +58,14 @@ void cv::cuda::drawColorDisp(InputArray, OutputArray, int, Stream&) { throw_no_c
 namespace cv { namespace cuda { namespace device
 {
     template <typename T, typename D>
-    void reprojectImageTo3D_gpu(const PtrStepSzb disp, PtrStepSzb xyz, const float* q, cudaStream_t stream);
+    void reprojectImageTo3D_gpu(const PtrStepSzb disp, PtrStepSzb xyz, const float* q, float minDisparity, cudaStream_t stream);
 }}}
 
-void cv::cuda::reprojectImageTo3D(InputArray _disp, OutputArray _xyz, InputArray _Q, int dst_cn, Stream& stream)
+void cv::cuda::reprojectImageTo3D(InputArray _disp, OutputArray _xyz, InputArray _Q, int dst_cn, bool handleMissingValues, Stream& stream)
 {
     using namespace cv::cuda::device;
 
-    typedef void (*func_t)(const PtrStepSzb disp, PtrStepSzb xyz, const float* q, cudaStream_t stream);
+    typedef void (*func_t)(const PtrStepSzb disp, PtrStepSzb xyz, const float* q, float minDisparity, cudaStream_t stream);
     static const func_t funcs[2][6] =
     {
         {reprojectImageTo3D_gpu<uchar, float3>, 0, 0, reprojectImageTo3D_gpu<short, float3>, reprojectImageTo3D_gpu<int, float3>, reprojectImageTo3D_gpu<float, float3>},
@@ -82,7 +82,10 @@ void cv::cuda::reprojectImageTo3D(InputArray _disp, OutputArray _xyz, InputArray
     _xyz.create(disp.size(), CV_MAKE_TYPE(CV_32F, dst_cn));
     GpuMat xyz = _xyz.getGpuMat();
 
-    funcs[dst_cn == 4][disp.type()](disp, xyz, Q.ptr<float>(), StreamAccessor::getStream(stream));
+    double minDisparity = FLT_MAX;
+    if(handleMissingValues)
+        cuda::minMax(disp, &minDisparity, 0);
+    funcs[dst_cn == 4][disp.type()](disp, xyz, Q.ptr<float>(), (float)minDisparity, StreamAccessor::getStream(stream));
 }
 
 ////////////////////////////////////////////////////////////////////////

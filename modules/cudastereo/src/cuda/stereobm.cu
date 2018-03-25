@@ -60,6 +60,9 @@ namespace cv { namespace cuda { namespace device
         #define STEREO_MIND 0                    // The minimum d range to check
         #define STEREO_DISP_STEP N_DISPARITIES   // the d step, must be <= 1 to avoid aliasing
 
+        #define REFINE_BLOCK_W 16                // floating point refinement thread block width, max 512 on CC1
+        #define REFINE_BLOCK_H 16                // floating point refinement thread block height, max 512 on CC1
+
         __constant__ unsigned int* cminSSDImage;
         __constant__ size_t cminSSD_step;
         __constant__ int cwidth;
@@ -366,6 +369,117 @@ namespace cv { namespace cuda { namespace device
             callers[winsz2](left, right, disp, maxdisp, stream);
         }
 
+        //////////////////////////////////////////////////////////////////////////////////////////////////
+        ////////////////////////////////// Floating point refinement /////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////////////////////
+
+        //calculate an SSD given upper left pointers of two images
+        template<int RADIUS>
+        __device__ uint3 CalcSSDwindow(unsigned char *left, unsigned char *right, const ssize_t stride) {
+            uint3 result = make_uint3(0,0,0);
+
+            for (int r = 0; r <= 2*RADIUS; r++) {
+                for(int c = 0; c <= 2*RADIUS; c++) {
+                    int leftpixel = left[r*stride+c];
+                    unsigned char *rightpixel = right+r*stride+c;
+                    result.x += SQ(leftpixel - (int)rightpixel[0]);
+                    result.y += SQ(leftpixel - (int)rightpixel[1]);
+                    result.z += SQ(leftpixel - (int)rightpixel[2]);
+                }
+            }
+            return result;
+        };
+
+        template<int RADIUS>
+        __global__ void BMrefineKernel(unsigned char *left, unsigned char *right, size_t img_step, PtrStepb disp, PtrStepf finedisp, int ndisp) {
+            int x = blockIdx.x*blockDim.x + threadIdx.x + ndisp + RADIUS;
+            int y = blockIdx.y*blockDim.y + threadIdx.y + RADIUS;
+
+            //int end_row = ::min(ROWSperTHREAD, cheight - y - RADIUS);
+            if ((x < cwidth) && (y < cheight)) {
+                int cur_disp = disp(y, x);
+                //default to un-refined result
+                finedisp(y,x) = (float)cur_disp;
+
+                int top = y - RADIUS;
+                int bot = y + RADIUS;
+                int l_edgL = x - RADIUS;
+                int l_edgR = x + RADIUS;
+                int x_r = x - cur_disp;
+                //we slide the window in the right image, so start at -1
+                int r_edgL = x_r - RADIUS - 1;
+                // only used for bounds check, use fully shifted version
+                int r_edgR = x_r + RADIUS + 1;
+
+                //if disparity was found (opencv says valid match)
+                //check disparity/right co-ords are in-bounds
+                //and left co-ords are in bounds
+                if ((cur_disp != 0) && (top >= 0) && (bot < cheight) &&
+                        (r_edgL >= 0) && (r_edgR < cwidth) &&
+                        (l_edgL >= 0) && (l_edgR < cwidth)) {
+                    uint3 ssd = CalcSSDwindow<RADIUS>(left + l_edgL + top*img_step,
+                            right + r_edgL + top*img_step, img_step);
+
+                    float a = ((float)ssd.x + (float)ssd.z)/2.0f - (float)ssd.y;
+                    float b = ((float)ssd.z - (float)ssd.x)/2.0f;
+                    float d = a + fabs(b);
+                    if ((a > 0.0f) && (fabs(d) > 1.0f)) {
+                        finedisp(y,x) = b/d + (float)cur_disp;
+                    }
+                }
+            }
+        };
+
+
+        template<int RADIUS> void refine_kernel_caller(const PtrStepSzb& left, const PtrStepSzb& right, const PtrStepSzb& disp, const PtrStepSzf& out_disp, int ndisp, const cudaStream_t& stream) {
+            dim3 grid(1,1,1);
+            dim3 threads(REFINE_BLOCK_W, REFINE_BLOCK_H, 1);
+            size_t smem_size = 0;
+
+            grid.x = divUp(left.cols - ndisp - 2 * RADIUS, REFINE_BLOCK_W);
+            grid.y = divUp(left.rows - 2 * RADIUS, REFINE_BLOCK_H);
+
+            BMrefineKernel<RADIUS><<<grid, threads, smem_size, stream>>>(left.data, right.data, left.step, disp, out_disp, ndisp);
+            cudaSafeCall( cudaGetLastError() );
+
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
+        };
+
+        typedef void (*refine_kernel_caller_t)(const PtrStepSzb& left, const PtrStepSzb& right, const PtrStepSzb& disp, const PtrStepSzf& out_disp, int ndisp, const cudaStream_t& stream);
+
+        const static refine_kernel_caller_t refine_callers[] =
+        {
+            0,
+            refine_kernel_caller< 1>, refine_kernel_caller< 2>, refine_kernel_caller< 3>,
+            refine_kernel_caller< 4>, refine_kernel_caller< 5>, refine_kernel_caller< 6>,
+            refine_kernel_caller< 7>, refine_kernel_caller< 8>, refine_kernel_caller< 9>,
+            refine_kernel_caller<10>, refine_kernel_caller<11>, refine_kernel_caller<12>,
+            refine_kernel_caller<13>, refine_kernel_caller<15>, refine_kernel_caller<15>,
+            refine_kernel_caller<16>, refine_kernel_caller<17>, refine_kernel_caller<18>,
+            refine_kernel_caller<19>, refine_kernel_caller<20>, refine_kernel_caller<21>,
+            refine_kernel_caller<22>, refine_kernel_caller<23>, refine_kernel_caller<24>,
+            refine_kernel_caller<25>
+
+            //0,0,0, 0,0,0, 0,0,refine_kernel_caller<9>
+        };
+        const int refine_callers_num = sizeof(refine_callers)/sizeof(refine_callers[0]);
+
+        void refineBM_CUDA(const PtrStepSzb& left, const PtrStepSzb& right, const PtrStepSzb& disp, const int ndisp, int winsz, const PtrStepSzf& out_disp, const cudaStream_t& stream) {
+            int winsz2 = winsz >> 1;
+
+            if (winsz2 == 0 || winsz2 >= refine_callers_num)
+                CV_Error(cv::Error::StsBadArg, "Unsupported window size");
+
+            cudaSafeCall( cudaMemset2D(out_disp.data, out_disp.step, 0, out_disp.cols*sizeof(float), out_disp.rows) );
+            cudaSafeCall( cudaMemcpyToSymbol( cwidth, &left.cols, sizeof(left.cols) ) );
+            cudaSafeCall( cudaMemcpyToSymbol( cheight, &left.rows, sizeof(left.rows) ) );
+
+            refine_callers[winsz2](left, right, disp, out_disp, ndisp, stream);
+        }
+
+
+ 
         //////////////////////////////////////////////////////////////////////////////////////////////////
         /////////////////////////////////////// Sobel Prefiler ///////////////////////////////////////////
         //////////////////////////////////////////////////////////////////////////////////////////////////
